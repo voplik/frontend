@@ -20,6 +20,9 @@ html {
   font-size: 15.3846154px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Панорамирование разрешено, масштабирование жестами — нет.
+     Chrome/Android слушают это свойство, iOS — нет (см. initNoZoom в main.js). */
+  touch-action: pan-x pan-y;
 }
 
 /* 375 → 420px: пропорциональное масштабирование */

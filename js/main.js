@@ -7,6 +7,37 @@
 
   var ERROR = '#c0563f';
 
+  /* Запрет масштабирования жестами. Поставьте false, если нужно вернуть
+     пользователю возможность увеличивать страницу щипком. */
+  var LOCK_ZOOM = true;
+
+  /* ------------------------------------------------- Запрет зума жестами -- */
+  /* iOS Safari игнорирует maximum-scale и touch-action, поэтому щипок и
+     двойной тап приходится гасить вручную. Автозум при фокусе на поле
+     закрыт кеглем 16px в CSS — здесь только жесты. */
+  function initNoZoom() {
+    if (!LOCK_ZOOM) return;
+
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) {
+      document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
+    });
+
+    // два пальца на экране — это всегда попытка масштабировать
+    document.addEventListener('touchmove', function (e) {
+      if (e.touches && e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+
+    // двойной тап
+    var lastTap = 0;
+    document.addEventListener('touchend', function (e) {
+      var now = Date.now();
+      if (now - lastTap < 300 && !e.target.closest('input, select, textarea')) {
+        e.preventDefault();
+      }
+      lastTap = now;
+    }, { passive: false });
+  }
+
   /* ----------------------------------------------------------- Аккордеон -- */
   function initFaq() {
     document.querySelectorAll('.faq-item__top').forEach(function (btn) {
@@ -305,6 +336,7 @@
   }
 
   function init() {
+    initNoZoom();
     initFaq();
     initOverlays();
     initSheetDrag();
