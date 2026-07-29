@@ -21,16 +21,33 @@
 
   /* -------------------------------------------- Поп-апы: открыть/закрыть -- */
   var scrollLock = 0;
+  var savedY = 0;
 
+  /* body{overflow:hidden} не держит фон в iOS Safari — там прокручивается
+     html. Поэтому фиксируем body и возвращаем позицию при закрытии. */
   function lock() {
-    if (scrollLock++ === 0) {
-      document.body.style.overflow = 'hidden';
-    }
+    if (scrollLock++ > 0) return;
+    savedY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var b = document.body.style;
+    b.position = 'fixed';
+    b.top = -savedY + 'px';
+    b.left = '0';
+    b.right = '0';
+    b.width = '100%';
+    b.overflow = 'hidden';
   }
 
   function unlock() {
     scrollLock = Math.max(0, scrollLock - 1);
-    if (scrollLock === 0) document.body.style.overflow = '';
+    if (scrollLock !== 0) return;
+    var b = document.body.style;
+    b.position = '';
+    b.top = '';
+    b.left = '';
+    b.right = '';
+    b.width = '';
+    b.overflow = '';
+    window.scrollTo(0, savedY);
   }
 
   function setInert(on) {
@@ -61,11 +78,28 @@
     if (firstInput) firstInput.focus({ preventScroll: true });
   }
 
+  function reducedMotion() {
+    return window.matchMedia &&
+           window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
   function closeOverlay(el) {
-    if (!el || !el.classList.contains('is-open')) return;
-    el.classList.remove('is-open');
-    unlock();
-    if (!document.querySelector('.overlay.is-open, .lightbox.is-open')) setInert(false);
+    if (!el || !el.classList.contains('is-open') || el.classList.contains('is-closing')) return;
+
+    var finish = function () {
+      el.classList.remove('is-open', 'is-closing');
+      var sheet = el.querySelector('.sheet');
+      if (sheet) {
+        sheet.style.transform = '';
+        sheet.style.transition = '';
+      }
+      unlock();
+      if (!document.querySelector('.overlay.is-open, .lightbox.is-open')) setInert(false);
+    };
+
+    if (reducedMotion()) { finish(); return; }
+    el.classList.add('is-closing');
+    setTimeout(finish, 220);
   }
 
   function closeAll() {
@@ -105,6 +139,51 @@
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeAll();
+    });
+  }
+
+  /* ------------------------------- Смахнуть шторку вниз, чтобы закрыть ---- */
+  function initSheetDrag() {
+    document.querySelectorAll('.overlay .sheet').forEach(function (sheet) {
+      var grip = sheet.querySelector('.sheet__grip') || sheet.querySelector('.menu__top');
+      if (!grip) return;
+
+      var startY = 0, shift = 0, dragging = false;
+
+      grip.addEventListener('pointerdown', function (e) {
+        if (e.button) return;
+        dragging = true;
+        startY = e.clientY;
+        shift = 0;
+        sheet.style.transition = 'none';
+        if (grip.setPointerCapture) grip.setPointerCapture(e.pointerId);
+      });
+
+      grip.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        shift = Math.max(0, e.clientY - startY);
+        sheet.style.transform = 'translate(-50%, ' + shift + 'px)';
+      });
+
+      var release = function () {
+        if (!dragging) return;
+        dragging = false;
+        sheet.style.transition = '';
+        if (shift > 90) {
+          closeOverlay(sheet.closest('.overlay'));
+        } else {
+          sheet.style.transform = 'translate(-50%, 0)';
+          setTimeout(function () { sheet.style.transform = ''; }, 180);
+        }
+      };
+      grip.addEventListener('pointerup', release);
+      grip.addEventListener('pointercancel', release);
+
+      // короткий тап по ручке — тоже закрыть
+      grip.addEventListener('click', function (e) {
+        if (shift > 5) { e.preventDefault(); return; }
+        if (grip.hasAttribute('data-sheet-close')) closeOverlay(sheet.closest('.overlay'));
+      });
     });
   }
 
@@ -228,6 +307,7 @@
   function init() {
     initFaq();
     initOverlays();
+    initSheetDrag();
     initChips();
     initRadioGroups();
     initSegmented();

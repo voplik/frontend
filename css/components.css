@@ -919,6 +919,13 @@ textarea.field__input { min-height: 6rem; resize: vertical; }
   display: none;
 }
 .overlay.is-open { display: block; }
+.overlay.is-closing .overlay__scrim { animation: ov-fade-out 0.2s ease forwards; }
+.overlay.is-closing .sheet { animation: sheet-down 0.22s ease forwards; }
+.overlay.is-closing .modal { animation: modal-out 0.18s ease forwards; }
+.lightbox.is-closing { animation: ov-fade-out 0.2s ease forwards; }
+
+.overlay,
+.lightbox { overscroll-behavior: none; }
 
 .overlay__scrim {
   position: absolute;
@@ -928,6 +935,9 @@ textarea.field__input { min-height: 6rem; resize: vertical; }
 }
 
 @keyframes ov-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ov-fade-out { to { opacity: 0; } }
+@keyframes sheet-down { to { transform: translate(-50%, 100%); } }
+@keyframes modal-out { to { transform: translate(-50%, -46%); opacity: 0; } }
 @keyframes sheet-up { from { transform: translate(-50%, 4%); } to { transform: translate(-50%, 0); } }
 @keyframes modal-in { from { transform: translate(-50%, -48%); opacity: 0; }
                       to   { transform: translate(-50%, -50%); opacity: 1; } }
@@ -944,18 +954,34 @@ textarea.field__input { min-height: 6rem; resize: vertical; }
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 0.75rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  padding: 0.25rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
   background: var(--surface-white);
   border-radius: 1.75rem 1.75rem 0 0;
   animation: sheet-up 0.24s ease;
 }
+.sheet__grip {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0 0.875rem;
+  background: none;
+  border: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.sheet__grip:active { cursor: grabbing; }
 .sheet__handle {
+  display: block;
   width: 2.75rem;
   height: 0.25rem;
-  margin: 0 auto 0.875rem;
+  margin: 0 auto;
   border-radius: var(--r-pill);
   background: var(--line-strong);
+  transition: background 0.15s ease;
 }
+.sheet__grip:hover .sheet__handle { background: var(--text-faint); }
+
+/* Зона перетаскивания у шторок без ручки (меню) */
+.menu__top { touch-action: none; }
 .sheet__h {
   display: flex;
   flex-direction: column;
@@ -1342,3 +1368,12 @@ textarea.field__input { min-height: 6rem; resize: vertical; }
 .review__pill .ic { color: var(--text-muted); }
 /* На главной ряд смешанный: видео-карточка и текстовая, зазор 12px */
 .reviews--mixed { gap: 0.75rem; }
+
+
+/* --------------------------------------------- Без зума при вводе (iOS) --- */
+/* Safari увеличивает страницу, если у поля кегль меньше 16px. Поднимаем кегль
+   только на тач-устройствах: на десктопе остаётся ровно 15px из макета,
+   max() сохраняет пропорциональный рост на широких экранах. */
+@media (pointer: coarse) {
+  .field__input { font-size: max(0.9375rem, 16px); }
+}
