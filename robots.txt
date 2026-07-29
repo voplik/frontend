@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kosmetolog-vlasova.ru/sitemap.xml
